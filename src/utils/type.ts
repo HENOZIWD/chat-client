@@ -1,6 +1,6 @@
 export interface MessageInfo {
-  id: string | undefined;
+  id: string;
   name: string;
   message: string;
-  sentAt: Date;
+  sentAt: string;
 }
