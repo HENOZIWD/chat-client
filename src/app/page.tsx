@@ -1,5 +1,6 @@
 'use client';
 
+import { MessageInfo } from "@/utils/type";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
@@ -8,13 +9,14 @@ let socket: Socket;
 export default function Home() {
   const [messages, setMessages] = useState<string[]>([]);
   const [input, setInput] = useState('');
+  const [name, setName] = useState('');
   const chatRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     socket = io(process.env.NEXT_PUBLIC_SERVER_URL);
 
-    socket.on('chat message', (msg: string) => {
-      setMessages((prev) => [...prev, msg]);
+    socket.on('chat message', (msg: MessageInfo) => {
+      setMessages((prev) => [...prev, msg.message]);
     });
 
     return () => {
@@ -29,10 +31,21 @@ export default function Home() {
   }, [messages]);
 
   const handleSendMessage = (e: FormEvent<HTMLFormElement>) => {
+    if (!socket.connected) {
+      return;
+    }
+
     e.preventDefault();
 
     if (input.trim() !== '') {
-      socket.emit('chat message', input);
+      const messageInfo: MessageInfo = {
+        id: socket.id,
+        name,
+        message: input,
+        sentAt: new Date(),
+      }
+
+      socket.emit('chat message', messageInfo);
       setInput('');
     }
   }
@@ -53,6 +66,12 @@ export default function Home() {
         onSubmit={handleSendMessage}
       >
         <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="border p-2 rounded"
+          placeholder="이름을 입력하세요"
+        />
+        <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           className="flex-1 border p-2 rounded"
@@ -60,7 +79,8 @@ export default function Home() {
         />
         <button
           type="submit"
-          className="bg-blue-500 text-white px-4 py-2 rounded"
+          className="bg-blue-500 text-white px-4 py-2 rounded disabled:bg-gray-500"
+          disabled={name === '' || input === ''}
         >
           전송
         </button>
